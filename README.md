@@ -39,8 +39,8 @@ esim-ltv/
 | Hito | Notebook | Status | Key deliverable |
 |------|----------|--------|-----------------|
 | 1 | `01_eda_survival.ipynb` | ✅ | KM survival curves proving dormant ≠ churned |
-| 2 | `02_ltv_models.ipynb` | 🔜 | BG/NBD + Gamma-Gamma vs LightGBM comparison |
-| 3 | `03_pricing_bridge.ipynb` | 🔜 | CAC ceiling, retention discount strategy, corridor LTV ranking |
+| 2 | `02_ltv_models.ipynb` | ✅ | BG/NBD + Gamma-Gamma vs LightGBM comparison |
+| 3 | `03_pricing_bridge.ipynb` | ✅ | CAC ceiling, retention discount strategy, corridor LTV ranking |
 
 ---
 
