@@ -46,8 +46,7 @@ esim-ltv/
 
 ## Slide deck
 
-An interactive summary of the project is available at [`slides.html`](./slides.html)
-— open locally in a browser or via GitHub Pages.
+An interactive summary of the project is available at [`slides.html`](https://ferariz.github.io/esim-ltv/slides.html).
 
 ---
 
