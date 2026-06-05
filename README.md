@@ -44,6 +44,13 @@ esim-ltv/
 
 ---
 
+## Slide deck
+
+An interactive summary of the project is available at [`slides.html`](./slides.html)
+— open locally in a browser or via GitHub Pages.
+
+---
+
 ## Quick start
 
 ```bash
