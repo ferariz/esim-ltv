@@ -6,7 +6,7 @@
 
 ## Why this problem is different
 
-Holafly sells unlimited travel eSIMs priced by duration (days), not gigabytes. Their customers follow **travel macro-cycles** — annual summer holidays, Christmas trips, shoulder-season breaks — not subscription renewal rhythms.
+A travel eSIM provider sells unlimited plans priced by duration (days), not gigabytes. Their customers follow **travel macro-cycles** — annual summer holidays, Christmas trips, shoulder-season breaks — not subscription renewal rhythms.
 
 A BG/NBD model treats every dormant user as having some probability of permanent dropout. Applied naively to travel eSIM, this mislabels a large fraction of waiting customers as churned, understates LTV, and misallocates retention budget.
 

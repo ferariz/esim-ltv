@@ -9,7 +9,7 @@ Three business questions answered:
 3. Corridor ranking  — destinations ranked by expected LTV net of wholesale cost
 
 All calculations are margin-based (not revenue-based) to account for
-Holafly's stochastic wholesale cost structure identified in Hito 1.
+the stochastic wholesale cost structure identified in Hito 1.
 
 Design note: these are decision-support tools, not optimisers. They produce
 human-interpretable tables and curves that a pricing or growth team can act
@@ -219,7 +219,7 @@ def rank_corridors(
     ----------
     ltv_predictions      : full prediction frame
     corridor_margin_rates: override median margin rates if known
-                           (e.g. from actual Holafly data)
+                           (e.g. from actual provider data)
 
     Returns
     -------
