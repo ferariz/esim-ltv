@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>esim-ltv — Non-Contractual LTV Modelling</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:      #0f1117;
+    --paper:    #f7f4ef;
+    --accent:   #c84b2f;
+    --blue:     #2d5fa6;
+    --green:    #2e7d5e;
+    --muted:    #7a7568;
+    --rule:     #d4cfc6;
+    --nomad:    #55A868;
+    --repeat:   #DD8452;
+    --once:     #4C72B0;
+    --thai:     #8172B2;
+    --eu:       #4C72B0;
+    --usa:      #DD8452;
+    --arg:      #C44E52;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #2a2520;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+    gap: 0;
+  }
+
+  /* ── NAV ── */
+  #nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(42,37,32,0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #nav-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.08em;
+  }
+  #nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  #slide-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+  }
+  .nav-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+    width: 30px; height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+
+  /* ── SLIDE WRAPPER ── */
+  #slides-container {
+    margin-top: 4rem;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .slide {
+    width: 100%;
+    background: var(--paper);
+    border-radius: 4px;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    min-height: 540px;
+  }
+  .slide.active {
+    display: flex;
+    flex-direction: column;
+  }
+  .slide.visible { opacity: 1; }
+
+  /* ── PROGRESS BAR ── */
+  #progress {
+    position: fixed;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+    z-index: 100;
+  }
+
+  /* ── SLIDE CHROME ── */
+  .slide-header {
+    padding: 0.55rem 2.5rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+  }
+  .slide-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .slide-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+  }
+
+  .slide-body {
+    flex: 1;
+    padding: 2.5rem 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3rem;
+    line-height: 1.1;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem;
+    line-height: 1.15;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    margin-bottom: 1.2rem;
+  }
+  h2 em { font-style: italic; color: var(--accent); }
+  .subtitle {
+    font-size: 1rem;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 580px;
+  }
+  .lead {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--ink);
+    font-weight: 300;
+    max-width: 640px;
+    margin-bottom: 1.5rem;
+  }
+  .mono { font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.2rem 1.6rem;
+    border-radius: 3px;
+    margin: 1.2rem 0;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    font-style: italic;
+  }
+  .callout strong { font-style: normal; color: #f0b982; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 0.3rem; }
+
+  /* ── TWO-COL ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    flex: 1;
+  }
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    flex: 1;
+  }
+
+  /* ── STAT BLOCKS ── */
+  .stat-block {
+    border-top: 3px solid var(--rule);
+    padding-top: 0.8rem;
+  }
+  .stat-block.accent { border-color: var(--accent); }
+  .stat-block.blue   { border-color: var(--blue); }
+  .stat-block.green  { border-color: var(--green); }
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.4;
+    font-weight: 400;
+  }
+
+  /* ── KM CHART ── */
+  .km-chart {
+    flex: 1;
+    position: relative;
+  }
+  svg text { font-family: 'DM Sans', sans-serif; }
+
+  /* ── FEATURE PILLS ── */
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+  .pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.06);
+    color: var(--ink);
+  }
+  .pill.survival { background: rgba(46,125,94,0.12); color: var(--green); }
+  .pill.rfm      { background: rgba(45,95,166,0.12); color: var(--blue); }
+  .pill.ping     { background: rgba(200,75,47,0.1);  color: var(--accent); }
+
+  /* ── MODEL COMPARE TABLE ── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.8rem;
+    font-size: 0.88rem;
+  }
+  .compare-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.4rem 0.8rem;
+    border-bottom: 2px solid var(--rule);
+  }
+  .compare-table td {
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink);
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .winner { color: var(--green); font-weight: 500; }
+  .compare-table .loser  { color: #b0a090; }
+  .badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-family: 'DM Mono', monospace;
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    margin-left: 0.3rem;
+  }
+  .badge.good { background: rgba(46,125,94,0.15); color: var(--green); }
+  .badge.bad  { background: rgba(200,75,47,0.12); color: var(--accent); }
+
+  /* ── BAR CHARTS ── */
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.7rem;
+  }
+  .bar-label {
+    width: 110px;
+    font-size: 0.78rem;
+    color: var(--ink);
+    text-align: right;
+    flex-shrink: 0;
+    line-height: 1.3;
+  }
+  .bar-track {
+    flex: 1;
+    height: 28px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+    justify-content: flex-end;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: white;
+    transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* ── STRATEGY TABLE ── */
+  .strategy-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 0.9fr 0.9fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+    font-size: 0.82rem;
+    margin-top: 1rem;
+  }
+  .sg-head {
+    background: var(--ink);
+    color: rgba(255,255,255,0.6);
+    padding: 0.5rem 0.8rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .sg-cell {
+    padding: 0.8rem;
+    border-top: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .sg-cell:nth-child(5n) { border-right: none; }
+  .priority {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+  .p-high   { background: rgba(46,125,94,0.15);  color: var(--green); }
+  .p-med    { background: rgba(221,132,82,0.15);  color: #b85f10; }
+  .p-low    { background: rgba(0,0,0,0.06);       color: var(--muted); }
+
+  /* ── ARCHETYPE DOT ── */
+  .arch-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── CORRIDOR RANKING ── */
+  .corridor-row {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--rule);
+    gap: 1rem;
+  }
+  .corridor-row:last-child { border-bottom: none; }
+  .corr-rank {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--rule);
+    width: 24px;
+    flex-shrink: 0;
+  }
+  .corr-name {
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .corr-bar-wrap { flex: 1; }
+  .corr-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    width: 120px;
+    text-align: right;
+    flex-shrink: 0;
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 1 TITLE ── */
+  .title-slide .slide-body {
+    justify-content: space-between;
+    padding: 3rem 2.5rem 2rem;
+  }
+  .title-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+  }
+  .title-rule {
+    width: 40px;
+    height: 3px;
+    background: var(--accent);
+    margin: 1.5rem 0;
+  }
+  .title-meta {
+    display: flex;
+    gap: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+  }
+  .meta-item { font-size: 0.78rem; color: var(--muted); }
+  .meta-item strong { display: block; color: var(--ink); font-weight: 500; margin-bottom: 0.1rem; }
+
+  /* ── FOOTNOTE ── */
+  .footnote {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-style: italic;
+  }
+
+  /* ── KM SVG STYLES ── */
+  .km-container { flex: 1; display: flex; flex-direction: column; }
+  .km-svg-wrap { flex: 1; min-height: 200px; }
+
+  @media (max-width: 700px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.4rem; }
+    .slide-body { padding: 1.5rem; }
+    .strategy-grid { font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <span id="nav-title">esim-ltv &nbsp;/&nbsp; Non-Contractual LTV Modelling</span>
+  <div id="nav-controls">
+    <span id="slide-counter">1 / 10</span>
+    <button class="nav-btn" id="prev-btn">&#8592;</button>
+    <button class="nav-btn" id="next-btn">&#8594;</button>
+  </div>
+</div>
+
+<div id="slides-container">
+
+  <!-- ══ SLIDE 1: TITLE ══ -->
+  <div class="slide title-slide" id="slide-1">
+    <div class="slide-header">
+      <span class="slide-num">01 / 10</span>
+      <span class="slide-tag">Overview</span>
+    </div>
+    <div class="slide-body">
+      <div>
+        <div class="title-eyebrow">Portfolio Project &mdash; LTV Modelling</div>
+        <h1>Non-Contractual<br>LTV for <em>Travel eSIM</em></h1>
+        <div class="title-rule"></div>
+        <p class="subtitle">
+          A three-milestone GitHub project modelling customer lifetime value
+          for unlimited travel eSIM plans — where dormant customers are waiting
+          for their next trip, not churned.
+        </p>
+      </div>
+      <div class="title-meta">
+        <div class="meta-item"><strong>Milestones</strong>EDA &amp; Survival · LTV Models · Pricing Bridge</div>
+        <div class="meta-item"><strong>Stack</strong>Python · LightGBM · lifetimes · pandas</div>
+        <div class="meta-item"><strong>Users modelled</strong>2,000 synthetic · 3-year history</div>
+        <div class="meta-item"><strong>Repo</strong><span class="mono">github.com/ferariz/esim-ltv</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 2: THE PROBLEM ══ -->
+  <div class="slide" id="slide-2">
+    <div class="slide-header">
+      <span class="slide-num">02 / 10</span>
+      <span class="slide-tag">Problem</span>
+    </div>
+    <div class="slide-body">
+      <h2>Standard LTV models<br><em>break in travel</em></h2>
+      <div class="two-col" style="align-items:start; gap:2.5rem;">
+        <div>
+          <p class="lead">Most LTV frameworks assume that once a customer stops purchasing, there is some probability they have <strong>permanently churned</strong>.</p>
+          <p class="lead">This is valid for subscriptions. For travel eSIM, it is wrong.</p>
+          <div class="callout">
+            <strong>Core thesis</strong>
+            A customer silent for 9 months is not lost — they are waiting for their next trip. Their behaviour follows <em>annual macro-cycles</em>, not random dropout.
+          </div>
+        </div>
+        <div>
+          <div class="stat-block accent" style="margin-bottom:1.4rem">
+            <div class="stat-num">80%</div>
+            <div class="stat-label">of customers are "leisure once" — buy once, then dormant 6–12 months before next trip</div>
+          </div>
+          <div class="stat-block blue" style="margin-bottom:1.4rem">
+            <div class="stat-num">~365d</div>
+            <div class="stat-label">median inter-trip interval for leisure segment — driven by annual travel cycles</div>
+          </div>
+          <div class="stat-block green">
+            <div class="stat-num">55%</div>
+            <div class="stat-label">of users have zero revenue in any given 12-month label window — but most will return</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 3: DATA & ARCHETYPES ══ -->
+  <div class="slide" id="slide-3">
+    <div class="slide-header">
+      <span class="slide-num">03 / 10</span>
+      <span class="slide-tag">Data</span>
+    </div>
+    <div class="slide-body">
+      <h2>Synthetic data:<br><em>three archetypes</em>, four corridors</h2>
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.8rem;">Customer archetypes</p>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--once)"></span>Leisure once</div>
+            <div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--once)">80%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--repeat)"></span>Leisure repeat</div>
+            <div class="bar-track"><div class="bar-fill" style="width:15%;background:var(--repeat)">15%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--nomad)"></span>Digital nomad</div>
+            <div class="bar-track"><div class="bar-fill" style="width:5%;background:var(--nomad)">5%</div></div>
+          </div>
+          <div style="margin-top:1.4rem;">
+            <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.5rem;">Data design choices</p>
+            <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);">Inter-arrival times use <strong>lognormal distributions</strong> — physically motivated by the right-skewed nature of travel gaps. Gaussian would allow negative intervals.</p>
+            <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-top:.5rem;">Background 1 GB/month <strong>retention pings</strong> after plan expiry modelled explicitly — they appear in the data but are excluded from survival analysis, then reintroduced as a feature.</p>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.8rem;">Destination corridors — margin profiles</p>
+          <div class="corridor-row">
+            <div class="corr-rank">1</div>
+            <div class="corr-name"><span class="arch-dot" style="background:var(--thai)"></span>Thailand</div>
+            <div class="corr-bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:74.8%;background:var(--thai)">74.8%</div></div></div>
+            <div class="corr-meta">cheap wholesale<br>lower absolute LTV</div>
+          </div>
+          <div class="corridor-row">
+            <div class="corr-rank">2</div>
+            <div class="corr-name"><span class="arch-dot" style="background:var(--eu)"></span>W. Europe</div>
+            <div class="corr-bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:63.6%;background:var(--eu)">63.6%</div></div></div>
+            <div class="corr-meta">mid wholesale<br>summer-peaked</div>
+          </div>
+          <div class="corridor-row">
+            <div class="corr-rank">3</div>
+            <div class="corr-name"><span class="arch-dot" style="background:var(--usa)"></span>USA</div>
+            <div class="corr-bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:62.9%;background:var(--usa)">62.9%</div></div></div>
+            <div class="corr-meta">mid wholesale<br>summer + xmas</div>
+          </div>
+          <div class="corridor-row">
+            <div class="corr-rank">4</div>
+            <div class="corr-name"><span class="arch-dot" style="background:var(--arg)"></span>Argentina</div>
+            <div class="corr-bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:45.8%;background:var(--arg)">45.8%</div></div></div>
+            <div class="corr-meta">expensive wholesale<br>volatile margin tail</div>
+          </div>
+          <p class="footnote">Margin rate = median margin / median revenue per transaction. Argentina shows negative-margin tail due to stochastic wholesale cost model.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 4: SURVIVAL ANALYSIS ══ -->
+  <div class="slide" id="slide-4">
+    <div class="slide-header">
+      <span class="slide-num">04 / 10</span>
+      <span class="slide-tag">Hito 1 · Key Finding</span>
+    </div>
+    <div class="slide-body">
+      <h2>Kaplan-Meier proof:<br><em>the 12-month plateau</em></h2>
+      <div class="two-col" style="align-items:start;">
+        <div class="km-container">
+          <div class="km-svg-wrap">
+            <svg viewBox="0 0 420 260" width="100%" style="display:block;">
+              <defs>
+                <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2d5fa6" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#2d5fa6" stop-opacity="0.03"/>
+                </linearGradient>
+              </defs>
+              <!-- axes -->
+              <line x1="50" y1="220" x2="400" y2="220" stroke="#d4cfc6" stroke-width="1"/>
+              <line x1="50" y1="20"  x2="50"  y2="220" stroke="#d4cfc6" stroke-width="1"/>
+              <!-- y labels -->
+              <text x="44" y="224" text-anchor="end" font-size="9" fill="#7a7568">0</text>
+              <text x="44" y="174" text-anchor="end" font-size="9" fill="#7a7568">0.25</text>
+              <text x="44" y="124" text-anchor="end" font-size="9" fill="#7a7568">0.50</text>
+              <text x="44" y="74"  text-anchor="end" font-size="9" fill="#7a7568">0.75</text>
+              <text x="44" y="24"  text-anchor="end" font-size="9" fill="#7a7568">1.0</text>
+              <!-- x labels -->
+              <text x="50"  y="234" text-anchor="middle" font-size="9" fill="#7a7568">0</text>
+              <text x="137" y="234" text-anchor="middle" font-size="9" fill="#7a7568">180d</text>
+              <text x="225" y="234" text-anchor="middle" font-size="9" fill="#7a7568">365d</text>
+              <text x="312" y="234" text-anchor="middle" font-size="9" fill="#7a7568">540d</text>
+              <text x="400" y="234" text-anchor="middle" font-size="9" fill="#7a7568">730d</text>
+              <!-- axis labels -->
+              <text x="225" y="250" text-anchor="middle" font-size="9" fill="#7a7568">Days since previous purchase</text>
+              <text x="12" y="120" text-anchor="middle" font-size="9" fill="#7a7568" transform="rotate(-90,12,120)">S(t)</text>
+
+              <!-- 365d reference line -->
+              <line x1="225" y1="20" x2="225" y2="220" stroke="#d4cfc6" stroke-width="1" stroke-dasharray="4,3"/>
+
+              <!-- CI band overall -->
+              <path d="M50,24 L90,55 L130,85 L170,108 L210,122 L225,128 L270,133 L310,136 L360,138 L400,139
+                       L400,149 L360,148 L310,146 L270,143 L225,138 L210,132 L170,118 L130,95 L90,65 L50,34 Z"
+                    fill="url(#bandGrad)"/>
+
+              <!-- KM curves -->
+              <!-- digital nomad -->
+              <polyline points="50,24 70,42 90,62 120,90 160,115 200,128 240,133 300,135 400,136"
+                        fill="none" stroke="#55A868" stroke-width="2" stroke-linejoin="round"/>
+              <!-- leisure repeat -->
+              <polyline points="50,24 80,55 120,88 160,112 200,128 240,134 300,138 400,140"
+                        fill="none" stroke="#DD8452" stroke-width="2" stroke-linejoin="round"/>
+              <!-- leisure once -->
+              <polyline points="50,24 90,65 140,100 190,120 230,130 270,135 320,139 400,141"
+                        fill="none" stroke="#4C72B0" stroke-width="2" stroke-linejoin="round"/>
+              <!-- overall -->
+              <polyline points="50,24 85,58 130,93 175,115 215,127 250,132 300,136 360,139 400,140"
+                        fill="none" stroke="#0f1117" stroke-width="2.5" stroke-linejoin="round"/>
+
+              <!-- plateau annotation -->
+              <circle cx="225" cy="129" r="4" fill="none" stroke="#c84b2f" stroke-width="1.5"/>
+              <line x1="229" y1="125" x2="268" y2="100" stroke="#c84b2f" stroke-width="1"/>
+              <rect x="268" y="86" width="118" height="28" rx="2" fill="white" stroke="#e8e0d4" stroke-width="1"/>
+              <text x="327" y="98" text-anchor="middle" font-size="8.5" fill="#c84b2f" font-weight="500">S ≈ 0.50 at 365 days</text>
+              <text x="327" y="109" text-anchor="middle" font-size="8" fill="#7a7568">50% still in cycle</text>
+
+              <!-- legend -->
+              <circle cx="58" cy="246" r="4" fill="#0f1117"/>
+              <text x="66" y="249" font-size="8" fill="#0f1117">Overall</text>
+              <circle cx="105" cy="246" r="4" fill="#55A868"/>
+              <text x="113" y="249" font-size="8" fill="#55A868">Digital nomad</text>
+              <circle cx="183" cy="246" r="4" fill="#DD8452"/>
+              <text x="191" y="249" font-size="8" fill="#DD8452">Leisure repeat</text>
+              <circle cx="260" cy="246" r="4" fill="#4C72B0"/>
+              <text x="268" y="249" font-size="8" fill="#4C72B0">Leisure once</text>
+            </svg>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="callout">
+            <strong>What the plateau means</strong>
+            S(t) stops declining sharply at ~12 months. A significant fraction of users are not lost — they are <em>waiting for their next trip</em>.
+          </div>
+          <div class="stat-block accent">
+            <div class="stat-num">~50%</div>
+            <div class="stat-label">of users still within their travel cycle at 12 months (have not yet returned, but will)</div>
+          </div>
+          <div class="stat-block green">
+            <div class="stat-num">68%</div>
+            <div class="stat-label">repeat purchase rate for users with active retention pings — vs 0% for users with no device activity</div>
+          </div>
+          <p style="font-size:0.82rem;line-height:1.6;color:var(--muted);">
+            The KM estimator handles right-censoring correctly: users who haven't yet returned are censored at the observation date — not treated as churned.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 5: BG/NBD ══ -->
+  <div class="slide" id="slide-5">
+    <div class="slide-header">
+      <span class="slide-num">05 / 10</span>
+      <span class="slide-tag">Hito 2 · Model A</span>
+    </div>
+    <div class="slide-body">
+      <h2>BG/NBD + Gamma-Gamma:<br><em>principled baseline</em></h2>
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <p class="lead">The BG/NBD model was designed exactly for non-contractual settings — it estimates the probability of being "alive" combined with expected purchase frequency, with no renewal signal required.</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-bottom:1rem;">We fit it as the principled probabilistic baseline. The <strong>Gamma-Gamma</strong> component models expected spend per transaction (conditional on activity).</p>
+          <div class="callout">
+            <strong>The key assumption — and where it fails</strong>
+            BG/NBD assumes a <em>constant geometric dropout rate</em>. Travel users don't drop out randomly — they follow annual macro-cycles. The model reads the 12-month plateau as high churn probability.
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.8rem;">BG/NBD performance by recency bucket</p>
+          <table class="compare-table">
+            <thead><tr><th>Recency</th><th>Actual LTV</th><th>BG/NBD</th><th>LightGBM</th></tr></thead>
+            <tbody>
+              <tr><td>&lt;90d</td><td>€33</td><td class="loser">€67 <span class="badge bad">+103%</span></td><td class="winner">€26 <span class="badge good">−21%</span></td></tr>
+              <tr><td>90–180d</td><td>€24</td><td class="loser">€60 <span class="badge bad">+146%</span></td><td class="winner">€20 <span class="badge good">−18%</span></td></tr>
+              <tr><td style="color:var(--accent);font-weight:500">180–365d</td><td>€18</td><td class="loser">€45 <span class="badge bad">+151%</span></td><td class="winner">€14 <span class="badge good">−21%</span></td></tr>
+              <tr><td style="color:var(--accent);font-weight:500">365–730d</td><td>€16</td><td class="loser">€53 <span class="badge bad">+235%</span></td><td class="winner">€15 <span class="badge good">−6%</span></td></tr>
+            </tbody>
+          </table>
+          <p class="footnote" style="margin-top:.8rem;">Dormant zone (180–730d) highlighted: BG/NBD systematically overestimates LTV here because it mistakes "waiting for next trip" for "high alive probability." LightGBM recovers via survival features.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 6: LIGHTGBM ══ -->
+  <div class="slide" id="slide-6">
+    <div class="slide-header">
+      <span class="slide-num">06 / 10</span>
+      <span class="slide-tag">Hito 2 · Model B</span>
+    </div>
+    <div class="slide-body">
+      <h2>LightGBM with<br><em>survival-informed features</em></h2>
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <p class="lead">Gradient-boosted trees on an RFM + survival feature matrix. <strong>Tweedie loss</strong> (power=1.5) handles the zero-inflated, heavy-tailed label distribution natively.</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-bottom:1.2rem;">The key differentiator: survival features that encode the annual macro-cycle structure BG/NBD cannot use.</p>
+
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.5rem;">Feature groups</p>
+          <div class="pill-group" style="margin-bottom:.8rem;">
+            <span class="pill rfm">recency_days</span>
+            <span class="pill rfm">frequency</span>
+            <span class="pill rfm">monetary_mean</span>
+            <span class="pill rfm">monetary_total</span>
+            <span class="pill rfm">tenure_days</span>
+          </div>
+          <div class="pill-group" style="margin-bottom:.8rem;">
+            <span class="pill survival">inter_trip_mean_days</span>
+            <span class="pill survival">est_next_trip_days</span>
+            <span class="pill survival">inter_trip_cv</span>
+            <span class="pill survival">n_inter_trip_intervals</span>
+          </div>
+          <div class="pill-group">
+            <span class="pill ping">n_pings_pre_cutoff</span>
+            <span class="pill ping">days_since_ping</span>
+            <span class="pill ping">has_ping</span>
+          </div>
+          <div style="margin-top:.7rem;display:flex;gap:.5rem;font-size:.72rem;">
+            <span style="color:var(--blue)">■ RFM</span>&nbsp;
+            <span style="color:var(--green)">■ Survival-informed</span>&nbsp;
+            <span style="color:var(--accent)">■ Retention ping</span>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.8rem;">Feature importance (top 6)</p>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">monetary_mean</div>
+            <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--repeat)">139</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">tenure_days</div>
+            <div class="bar-track"><div class="bar-fill" style="width:89%;background:var(--repeat)">124</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">recency_days</div>
+            <div class="bar-track"><div class="bar-fill" style="width:84%;background:var(--repeat)">117</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">monetary_total</div>
+            <div class="bar-track"><div class="bar-fill" style="width:81%;background:var(--repeat)">113</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">inter_trip_mean</div>
+            <div class="bar-track"><div class="bar-fill" style="width:78%;background:var(--nomad)">109</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" style="font-size:.75rem;">est_next_trip</div>
+            <div class="bar-track"><div class="bar-fill" style="width:70%;background:var(--nomad)">97</div></div>
+          </div>
+
+          <div class="stat-block green" style="margin-top:1.2rem;">
+            <div class="stat-num">€18.96</div>
+            <div class="stat-label">MAE on held-out test set (20% split) · MAPE 56.7% on non-zero actuals</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 7: MODEL COMPARISON ══ -->
+  <div class="slide" id="slide-7">
+    <div class="slide-header">
+      <span class="slide-num">07 / 10</span>
+      <span class="slide-tag">Hito 2 · Results</span>
+    </div>
+    <div class="slide-body">
+      <h2>Model comparison</h2>
+      <div class="two-col" style="align-items:start; gap:2rem;">
+        <div>
+          <table class="compare-table">
+            <thead>
+              <tr><th>Metric</th><th>BG/NBD + GG</th><th>LightGBM</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>MAE</td>
+                <td class="loser">€46.70</td>
+                <td class="winner">€18.96 <span class="badge good">2.5× better</span></td>
+              </tr>
+              <tr>
+                <td>MAPE (non-zero)</td>
+                <td class="loser">140.2%</td>
+                <td class="winner">56.7% <span class="badge good">2.5× better</span></td>
+              </tr>
+              <tr>
+                <td>Dormant users</td>
+                <td class="loser">Overestimates</td>
+                <td class="winner">Calibrated</td>
+              </tr>
+              <tr>
+                <td>Macro-cycle aware</td>
+                <td class="loser">No</td>
+                <td class="winner">Yes (via features)</td>
+              </tr>
+              <tr>
+                <td>Zero-inflation</td>
+                <td class="loser">Partial</td>
+                <td class="winner">Native (Tweedie)</td>
+              </tr>
+              <tr>
+                <td>Interpretability</td>
+                <td class="winner">High (probabilistic)</td>
+                <td class="loser">Medium (SHAP needed)</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="footnote" style="margin-top:.8rem;">BG/NBD convergence required penalizer=1.0 (vs typical 0.01 for e-commerce data) — a numerical signal that the geometric dropout assumption is misspecified for this data.</p>
+        </div>
+        <div>
+          <div class="callout" style="margin-bottom:1.2rem;">
+            <strong>Why both models matter</strong>
+            BG/NBD gives us a <em>documented failure mode</em>, not just a baseline. Showing precisely where and why it fails — the dormant zone — is the business-facing version of the KM plateau argument.
+          </div>
+          <div class="stat-block blue">
+            <div class="stat-num">2.5×</div>
+            <div class="stat-label">improvement in MAE from BG/NBD to LightGBM, driven by survival features encoding travel macro-cycles</div>
+          </div>
+          <div class="stat-block green" style="margin-top:1rem;">
+            <div class="stat-num">Top 5</div>
+            <div class="stat-label">features include <span class="mono" style="font-size:.8rem;">inter_trip_mean_days</span> — a survival feature with no equivalent in classic RFM or BG/NBD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 8: CAC CEILING ══ -->
+  <div class="slide" id="slide-8">
+    <div class="slide-header">
+      <span class="slide-num">08 / 10</span>
+      <span class="slide-tag">Hito 3 · Acquisition</span>
+    </div>
+    <div class="slide-body">
+      <h2>CAC ceiling<br>by <em>segment</em></h2>
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <p class="lead">Maximum justifiable acquisition spend per segment, at a <strong>3× LTV:CAC multiple</strong> on a margin basis.</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-bottom:1.5rem;">Wholesale cost is stochastic and corridor-dependent — we use margin, not revenue, as the LTV basis. A €27 plan in Argentina yields far less margin than a €14 plan in Thailand.</p>
+
+          <div class="bar-row" style="margin-bottom:1rem;">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--nomad)"></span>Digital nomad</div>
+            <div class="bar-track" style="height:36px;"><div class="bar-fill" style="width:100%;background:var(--nomad);font-size:.8rem;">≤ €13.37</div></div>
+          </div>
+          <div class="bar-row" style="margin-bottom:1rem;">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--repeat)"></span>Leisure repeat</div>
+            <div class="bar-track" style="height:36px;"><div class="bar-fill" style="width:36%;background:var(--repeat);font-size:.8rem;">≤ €4.81</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--once)"></span>Leisure once</div>
+            <div class="bar-track" style="height:36px;"><div class="bar-fill" style="width:17.5%;background:var(--once);font-size:.8rem;">≤ €2.34</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="callout">
+            <strong>Strategic implication</strong>
+            The €2.34 ceiling for leisure-once is not a pessimistic finding — it's a channel signal. This 80% segment requires <em>organic acquisition</em> (SEO, word-of-mouth, referral), not paid CAC.
+          </div>
+          <div class="stat-block green" style="margin-top:1.2rem;">
+            <div class="stat-num">5.7×</div>
+            <div class="stat-label">spread between digital nomad and leisure-once CAC ceiling — justifies distinct bid strategies per channel segment</div>
+          </div>
+          <p style="font-size:0.83rem;line-height:1.5;color:var(--muted);margin-top:1rem;">IQR for digital nomads: €11.56 – €14.80. Narrow range reflects low LTV variance in this high-frequency, consistent-spend segment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 9: RETENTION DISCOUNT ══ -->
+  <div class="slide" id="slide-9">
+    <div class="slide-header">
+      <span class="slide-num">09 / 10</span>
+      <span class="slide-tag">Hito 3 · Retention</span>
+    </div>
+    <div class="slide-body">
+      <h2>Retention discount:<br><em>dormant ≠ lost</em></h2>
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <p class="lead">1,084 users are dormant (recency &gt;180 days, ≥1 prior purchase). The question is not whether to re-engage them — it's <strong>how much it's worth spending</strong> to do so.</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-bottom:1.2rem;">Break-even condition: <span class="mono">max_discount = P(reactivate) × predicted_margin</span></p>
+
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.7rem;">Max justified discount for dormant users</p>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--nomad)"></span>Digital nomad</div>
+            <div class="bar-track" style="height:32px;"><div class="bar-fill" style="width:100%;background:var(--nomad);font-size:.8rem;">€9.72 (36% off)</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--repeat)"></span>Leisure repeat</div>
+            <div class="bar-track" style="height:32px;"><div class="bar-fill" style="width:36.4%;background:var(--repeat);font-size:.8rem;">€3.54 (13%)</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span class="arch-dot" style="background:var(--once)"></span>Leisure once</div>
+            <div class="bar-track" style="height:32px;"><div class="bar-fill" style="width:18.1%;background:var(--once);font-size:.8rem;">€1.76 (6.5%)</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="callout">
+            <strong>This is a testable hypothesis</strong>
+            Offer €0, €3, €5, €8 discounts to randomly-assigned dormant cohorts. Measure reactivation rates. One A/B test directly calibrates the P(reactivate | discount) curve — and validates or refines every number on this slide.
+          </div>
+          <div class="stat-block accent" style="margin-top:1.2rem;">
+            <div class="stat-num">1,084</div>
+            <div class="stat-label">dormant users in the 3-year synthetic cohort — the target population for any reactivation campaign</div>
+          </div>
+          <p style="font-size:0.83rem;line-height:1.5;color:var(--muted);margin-top:1rem;">P(reactivate) baseline = 0.25. The sensitivity of the max discount to this assumption is linear — a key parameter to calibrate experimentally.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 10: SUMMARY ══ -->
+  <div class="slide" id="slide-10">
+    <div class="slide-header">
+      <span class="slide-num">10 / 10</span>
+      <span class="slide-tag">Strategy Summary</span>
+    </div>
+    <div class="slide-body">
+      <h2>Strategy decision table<br>+ <em>next steps</em></h2>
+
+      <div class="strategy-grid">
+        <div class="sg-head">Archetype</div>
+        <div class="sg-head">Median LTV</div>
+        <div class="sg-head">CAC ceiling</div>
+        <div class="sg-head">Acq. priority</div>
+        <div class="sg-head">Ret. priority</div>
+
+        <div class="sg-cell"><span class="arch-dot" style="background:var(--nomad)"></span><strong>Digital nomad</strong></div>
+        <div class="sg-cell">€59.22</div>
+        <div class="sg-cell">€13.37</div>
+        <div class="sg-cell"><span class="priority p-high">High</span></div>
+        <div class="sg-cell"><span class="priority p-high">High</span></div>
+
+        <div class="sg-cell"><span class="arch-dot" style="background:var(--repeat)"></span>Leisure repeat</div>
+        <div class="sg-cell">€23.72</div>
+        <div class="sg-cell">€4.81</div>
+        <div class="sg-cell"><span class="priority p-med">Medium</span></div>
+        <div class="sg-cell"><span class="priority p-med">Medium</span></div>
+
+        <div class="sg-cell"><span class="arch-dot" style="background:var(--once)"></span>Leisure once</div>
+        <div class="sg-cell">€11.33</div>
+        <div class="sg-cell">€2.34</div>
+        <div class="sg-cell"><span class="priority p-low">Organic only</span></div>
+        <div class="sg-cell"><span class="priority p-low">Low</span></div>
+      </div>
+
+      <div class="three-col" style="margin-top:1.5rem; flex:0;">
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.5rem;">Corridor priority</p>
+          <div style="font-size:0.83rem;line-height:1.7;color:var(--ink);">
+            <div><span class="arch-dot" style="background:var(--eu)"></span><strong>W. Europe</strong> — largest volume, solid margin</div>
+            <div><span class="arch-dot" style="background:var(--usa)"></span><strong>USA</strong> — comparable, Christmas upside</div>
+            <div><span class="arch-dot" style="background:var(--thai)"></span><strong>Thailand</strong> — best risk-adjusted score</div>
+            <div><span class="arch-dot" style="background:var(--arg)"></span><strong>Argentina</strong> — caution: margin volatility</div>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.5rem;">Month 2 → Month 3 bridge</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);">Each output here is an experiment design: CAC bid by segment (geo-lift test), retention discount by archetype (holdout A/B), corridor budget allocation (incrementality test).</p>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.5rem;">Repo</p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--ink);margin-bottom:.5rem;"><span class="mono">github.com/ferariz/esim-ltv</span></p>
+          <p style="font-size:0.83rem;line-height:1.6;color:var(--muted);">3 notebooks · modular <span class="mono">src/</span> · reproducible with <span class="mono">make data</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides-container -->
+
+<div id="progress"></div>
+
+<script>
+  const TOTAL = 10;
+  let current = 1;
+
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => {
+      s.classList.remove('active','visible');
+    });
+    const el = document.getElementById('slide-' + n);
+    el.classList.add('active');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el.classList.add('visible'));
+    });
+    document.getElementById('slide-counter').textContent = n + ' / ' + TOTAL;
+    document.getElementById('progress').style.width = (n / TOTAL * 100) + '%';
+    current = n;
+  }
+
+  document.getElementById('next-btn').addEventListener('click', () => {
+    if (current < TOTAL) showSlide(current + 1);
+  });
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    if (current > 1) showSlide(current - 1);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (current < TOTAL) showSlide(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      if (current > 1) showSlide(current - 1);
+    }
+  });
+
+  showSlide(1);
+</script>
+</body>
+</html>
